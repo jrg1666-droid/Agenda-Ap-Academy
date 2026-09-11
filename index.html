@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Academia Online - Calendario</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --gray: #64748b;
+            --border: #e2e8f0;
+            --danger: #ef4444;
+            --success: #22c55e;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: var(--bg); color: var(--text); padding: 16px; max-width: 600px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 20px; }
+        h1 { font-size: 1.5rem; color: var(--primary); }
+        
+        .card { background: var(--card-bg); border-radius: 12px; padding: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 16px; }
+        
+        /* Calendario Simple */
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+        .day-name { font-size: 0.8rem; font-weight: bold; color: var(--gray); padding-bottom: 4px; }
+        .day { padding: 10px 4px; font-size: 0.9rem; border-radius: 8px; cursor: pointer; background: #f1f5f9; position: relative; }
+        .day:hover { background: #e2e8f0; }
+        .day.selected { background: var(--primary); color: white; font-weight: bold; }
+        .day.has-classes::after { content: ''; position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; background: var(--danger); border-radius: 50%; }
+        .day.selected.has-classes::after { background: white; }
+
+        /* Formulario */
+        h2 { font-size: 1.1rem; margin-bottom: 12px; }
+        .form-group { margin-bottom: 10px; }
+        label { display: block; font-size: 0.85rem; color: var(--gray); margin-bottom: 4px; }
+        input, select, textarea { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; }
+        textarea { resize: vertical; height: 60px; }
+        .checkbox-group { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+        .checkbox-group input { width: auto; }
+        
+        button { background: var(--primary); color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; width: 100%; cursor: pointer; margin-top: 8px; }
+        button:hover { background: var(--primary-hover); }
+
+        /* Lista de clases del día */
+        .class-item { background: #f8fafc; border-left: 4px solid var(--primary); padding: 10px; border-radius: 4px; margin-bottom: 8px; position: relative; }
+        .class-time { font-weight: bold; font-size: 0.9rem; color: var(--primary); }
+        .class-student { font-size: 1rem; font-weight: bold; }
+        .class-details { font-size: 0.85rem; color: var(--gray); margin-top: 4px; }
+        .badge { display: inline-block; padding: 2px 6px; font-size: 0.75rem; border-radius: 4px; font-weight: bold; margin-top: 4px; }
+        .badge.paid { background: #dcfce7; color: var(--success); }
+        .badge.pending { background: #fee2e2; color: var(--danger); }
+        .delete-btn { position: absolute; top: 8px; right: 8px; background: none; border: none; color: var(--danger); font-size: 1rem; cursor: pointer; width: auto; padding: 0; margin: 0; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>AP Calendar</h1>
+    </header>
+
+    <!-- Calendario -->
+    <div class="card">
+        <div class="calendar-header">
+            <button style="width:auto; padding:4px 10px;" onclick="changeMonth(-1)">&lt;</button>
+            <h2 id="month-year-display" style="margin:0;"></h2>
+            <button style="width:auto; padding:4px 10px;" onclick="changeMonth(1)">&gt;</button>
+        </div>
+        <div class="calendar-grid" id="calendar-days-names">
+            <div class="day-name">Lun</div><div class="day-name">Mar</div><div class="day-name">Mié</div><div class="day-name">Jue</div><div class="day-name">Vie</div><div class="day-name">Sáb</div><div class="day-name">Dom</div>
+        </div>
+        <div class="calendar-grid" id="calendar-days-grid" style="margin-top: 4px;"></div>
+    </div>
+
+    <!-- Añadir Clase -->
+    <div class="card">
+        <h2>Añadir Clase para el <span id="selected-date-title"></span></h2>
+        <form id="class-form" onsubmit="addClass(event)">
+            <div class="form-group">
+                <label>Hora</label>
+                <input type="time" id="class-time" required>
+            </div>
+            <div class="form-group">
+                <label>Alumno</label>
+                <input type="text" id="class-student" placeholder="Nombre del alumno" required>
+            </div>
+            <div class="form-group">
+                <label>Materia / Asignatura</label>
+                <input type="text" id="class-subject" placeholder="Ej: Inglés, Matemáticas...">
+            </div>
+            <div class="form-group">
+                <label>Progreso / Lección actual (por dónde van)</label>
+                <input type="text" id="class-progress" placeholder="Ej: Unidad 3, página 45">
+            </div>
+            <div class="form-group">
+                <label>Notas adicionales</label>
+                <textarea id="class-notes" placeholder="Observaciones de la clase..."></textarea>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="class-paid">
+                <label for="class-paid" style="margin:0; cursor:pointer;">¿Pago realizado?</label>
+            </div>
+            <button type="submit">Guardar Clase</button>
+        </form>
+    </div>
+
+    <!-- Clases del día seleccionado -->
+    <div class="card">
+        <h2>Clases programadas</h2>
+        <div id="classes-list">
+            <p style="color:var(--gray); font-size:0.9rem;">Selecciona un día para ver o añadir clases.</p>
+        </div>
+    </div>
+
+    <script>
+        let currentDate = new Date();
+        let selectedDateStr = formatDateKey(new Date());
+        let classesData = JSON.parse(localStorage.getItem('ap_academy_classes')) || {};
+
+        function formatDateKey(date) {
+            let year = date.getFullYear();
+            let month = String(date.getMonth() + 1).padStart(2, '0');
+            let day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function initCalendar() {
+            let year = currentDate.getFullYear();
+            let month = currentDate.getMonth();
+
+            const monthsNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            document.getElementById('month-year-display').innerText = `${monthsNames[month]} ${year}`;
+
+            let firstDayIndex = new Date(year, month, 1).getDay();
+            firstDayIndex = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
+            let totalDays = new Date(year, month + 1, 0).getDate();
+
+            let gridHTML = '';
+            
+            for (let i = 0; i < firstDayIndex; i++) {
+                gridHTML += `<div></div>`;
+            }
+
+            for (let day = 1; day <= totalDays; day++) {
+                let thisDate = new Date(year, month, day);
+                let dateStr = formatDateKey(thisDate);
+                let isSelected = dateStr === selectedDateStr ? 'selected' : '';
+                let hasClasses = (classesData[dateStr] && classesData[dateStr].length > 0) ? 'has-classes' : '';
+
+                gridHTML += `<div class="day ${isSelected} ${hasClasses}" onclick="selectDate('${dateStr}')">${day}</div>`;
+            }
+
+            document.getElementById('calendar-days-grid').innerHTML = gridHTML;
+            document.getElementById('selected-date-title').innerText = selectedDateStr;
+            renderClassesList();
+        }
+
+        function changeMonth(direction) {
+            currentDate.setMonth(currentDate.getMonth() + direction);
+            initCalendar();
+        }
+
+        function selectDate(dateStr) {
+            selectedDateStr = dateStr;
+            initCalendar();
+        }
+
+        function addClass(e) {
+            e.preventDefault();
+            let time = document.getElementById('class-time').value;
+            let student = document.getElementById('class-student').value;
+            let subject = document.getElementById('class-subject').value;
+            let progress = document.getElementById('class-progress').value;
+            let notes = document.getElementById('class-notes').value;
+            let paid = document.getElementById('class-paid').checked;
+
+            if (!classesData[selectedDateStr]) {
+                classesData[selectedDateStr] = [];
+            }
+
+            classesData[selectedDateStr].push({
+                id: Date.now(),
+                time, student, subject, progress, notes, paid
+            });
+
+            classesData[selectedDateStr].sort((a, b) => a.time.localeCompare(b.time));
+
+            localStorage.setItem('ap_academy_classes', JSON.stringify(classesData));
+
+            document.getElementById('class-student').value = '';
+            document.getElementById('class-subject').value = '';
+            document.getElementById('class-progress').value = '';
+            document.getElementById('class-notes').value = '';
+            document.getElementById('class-paid').checked = false;
+
+            initCalendar();
+        }
+
+        function deleteClass(id) {
+            if(classesData[selectedDateStr]) {
+                classesData[selectedDateStr] = classesData[selectedDateStr].filter(c => c.id !== id);
+                if(classesData[selectedDateStr].length === 0) {
+                    delete classesData[selectedDateStr];
+                }
+                localStorage.setItem('ap_academy_classes', JSON.stringify(classesData));
+                initCalendar();
+            }
+        }
+
+        function renderClassesList() {
+            let container = document.getElementById('classes-list');
+            let dayClasses = classesData[selectedDateStr] || [];
+
+            if (dayClasses.length === 0) {
+                container.innerHTML = `<p style="color:var(--gray); font-size:0.9rem;">No hay clases programadas para este día.</p>`;
+                return;
+            }
+
+            let html = '';
+            dayClasses.forEach(c => {
+                html += `
+                    <div class="class-item">
+                        <button class="delete-btn" onclick="deleteClass(${c.id})">&times;</button>
+                        <div class="class-time">${c.time}</div>
+                        <div class="class-student">${c.student}</div>
+                        ${c.subject ? `<div class="class-details"><strong>Materia:</strong> ${c.subject}</div>` : ''}
+                        ${c.progress ? `<div class="class-details"><strong>Progreso:</strong> ${c.progress}</div>` : ''}
+                        ${c.notes ? `<div class="class-details"><strong>Notas:</strong> ${c.notes}</div>` : ''}
+                        <div><span class="badge ${c.paid ? 'paid' : 'pending'}">${c.paid ? 'Pagado' : 'Pago Pendiente'}</span></div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        initCalendar();
+    </script>
+</body>
+</html>
